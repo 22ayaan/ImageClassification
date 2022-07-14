@@ -1,6 +1,6 @@
 import numpy as np
 import os
-#import PIL
+import PIL
 import tensorflow as tf
 
 from tensorflow import keras
@@ -8,9 +8,9 @@ from tensorflow.keras import layers
 from tensorflow.keras.models import Sequential
 
 import pathlib
-def imageCheck(model, testImage):
-    image_name = input("Enter the filename of the image you want to test: ")
-    image_path = tf.keras.utils.get_file('Input Flower', origin=image_name)
+def imageCheck(model):
+    image_url = input("Enter the URL of the image you want to test: ")
+    image_path = tf.keras.utils.get_file(fname = None, origin=image_url)
     img = tf.keras.utils.load_img(
         image_path, target_size=(img_height, img_width)
     )
@@ -98,3 +98,7 @@ history = model.fit(
     validation_data=val_ds,
     epochs=epochs
   )
+
+model.save('/tmp/modelPi')
+
+imageCheck(model)
