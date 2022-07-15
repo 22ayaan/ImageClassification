@@ -99,6 +99,6 @@ history = model.fit(
     epochs=epochs
   )
 
-model.save('/tmp/modelPi')
+model.save('model#1')
 
 imageCheck(model)

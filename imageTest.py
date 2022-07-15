@@ -28,7 +28,7 @@ img_height = 180
 img_width = 180  
 class_names = []
 
-loaded_model = tf.keras.models.load_model('model')
+loaded_model = tf.keras.models.load_model('model#2')
 data_dir = pathlib.Path('flower_photos')
 val_ds = tf.keras.utils.image_dataset_from_directory(
     data_dir,
