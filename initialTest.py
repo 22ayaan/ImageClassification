@@ -1,3 +1,4 @@
+import datetime
 import numpy as np
 import os
 import PIL
@@ -92,13 +93,13 @@ model.compile(optimizer='adam',
                 loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
                 metrics=['accuracy'])
 
-epochs = 20
+epochs = 2
 history = model.fit(
     train_ds,
     validation_data=val_ds,
     epochs=epochs
   )
 
-model.save('model#3')
+model.save('models/model' + datetime.datetime.now().strftime("%Y_%m_%d-%H_%M_%S") + '.h5')
 
 imageCheck(model)

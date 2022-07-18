@@ -4,6 +4,8 @@ import PIL
 import tensorflow as tf
 import pathlib
 import shutil
+import time
+
 from datetime import datetime
 from PIL import Image
 from tensorflow import keras
@@ -11,8 +13,6 @@ from tensorflow.keras import layers
 from tensorflow.keras.models import Sequential
 
 def imageCheck(model,img):
-    #image_path = tf.keras.utils.get_file(origin=img)
-    #image_path = pathlib.Path(img)
     img = tf.keras.utils.load_img(
         img, target_size=(img_height, img_width)
     )
@@ -20,58 +20,224 @@ def imageCheck(model,img):
     img_array = tf.expand_dims(img_array, 0) # Create a batch
     predictions = model.predict(img_array)
     score = tf.nn.softmax(predictions[0])
-    st.markdown(
-        "**This image most likely belongs to {} with a {:.2f} percent confidence.**"
+    st.success(
+        "**This image most likely belongs to {} with a {:.2f} % confidence.**"
         .format(class_names[np.argmax(score)], 100 * np.max(score))
     )
+    
 
-def uploadOption():
+def uploadOption(upload_method):
     if upload_method == "Upload Image from device":
         img = st.file_uploader("Upload an image", type=["jpg", "png", "jpeg"])
-        
-        upload_button = st.button("Upload")
-        if upload_button:
-            img = Image.open(img)
+        # upload_button = st.button("Upload")
+        # if upload_button:
+        img = Image.open(img)
             
-            if img.format == 'PNG':
-                img = img.convert('RGB')
-                img.save('image.jpg')
-            st.image(img,width=250)
+        if img.format == 'PNG':
+            img = img.convert('RGB')
+            img.save('image.jpg')
+        st.image(img,width=250)
 
-            date = datetime.now().strftime("%Y_%m_%d-%I-%M-%S_%p")
-            directory = 'uploaded_images/'
-            filepath = directory+'image_' + date + '.jpg'
-            img.save(filepath)
+        date = datetime.now().strftime("%Y_%m_%d-%I-%M-%S_%p")
+        directory = 'uploaded_images/'
+        filepath = directory+'image_' + date + '.jpg'
+        img.save(filepath)
+
     elif upload_method == "Enter the URL of image":
         img_url = st.text_input("Enter the URL of the image you want to test: ")
-        upload_button = st.button("Upload")
-        if upload_button:
-            st.image(img_url,width=250)
+        #upload_button = st.button("Upload")
+        # if upload_button:
+        st.image(img_url,width=250)
+        st.success("Image successfully uploaded!")
         img_path = tf.keras.utils.get_file(origin=img_url)
         filepath = pathlib.Path(img_path)
-    imageCheck(loaded_model,filepath)
+    return filepath
 
-st.header("Image Classifier")
-st.subheader("This app will help you identify the object(s) in an image.")
-upload_method = st.radio("Select upload optiom", ("Upload Image from device", "Enter the URL of image"))
+st.header("Image Classification Model Dashboard")
 
-#tab1, tab2 = st.tabs(['Upload Image from device', 'Enter the URL of image'])
+tab1, tab2, tab3 = st.tabs(['Flower image classification model', 'Train your own model', 'Test your model'])
 
+with tab1:
+    upload_method = st.radio("Select upload option", ("Upload Image from device", "Enter the URL of image"))
 
-batch_size = 32
-img_height = 180
-img_width = 180  
-class_names = []
+    batch_size = 32
+    img_height = 180
+    img_width = 180  
+    class_names = []
 
-loaded_model = tf.keras.models.load_model('model#2')
-data_dir = pathlib.Path('flower_photos')
-val_ds = tf.keras.utils.image_dataset_from_directory(
-    data_dir,
-    validation_split=0.2,
-    subset="validation",
-    seed=123,
-    image_size=(img_height, img_width),
-    batch_size=batch_size)
+    loaded_model = tf.keras.models.load_model('models/model#2')
+    data_dir = pathlib.Path('flower_photos')
+    val_ds = tf.keras.utils.image_dataset_from_directory(
+        data_dir,
+        validation_split=0.2,
+        subset="validation",
+        seed=123,
+        image_size=(img_height, img_width),
+        batch_size=batch_size)
+        
+    class_names = val_ds.class_names
+    file_path = uploadOption(upload_method)
+    imageCheck(loaded_model,file_path)
+
+with tab2:
+    st.header("Train your own model")
+    upload_method2 = st.radio("Select upload option", ("Upload Dataset ZIP file from device", "Enter the URL of dataset source"))
     
-class_names = val_ds.class_names
-uploadOption()
+    if upload_method2 == "Upload Dataset ZIP file from device":
+        zip_file = st.file_uploader("Upload a dataset ZIP file", type=["zip"])
+        upload_button = st.button("Upload", key="upload_dataset")
+        if upload_button:
+            shutil.unpack_archive(zip_file, 'uploaded_dataset/', format='zip')
+            dataset_path = pathlib.Path('uploaded_dataset/')
+            st.success("Dataset uploaded successfully")
+
+    elif upload_method2 == "Enter the URL of dataset source":
+        dataset_url = st.text_input("Enter the URL of the dataset source: ")
+        upload_button = st.button("Upload")
+
+        if upload_button:
+            st.success("Dataset uploaded successfully")
+            dataset_path = tf.keras.utils.get_file(origin=dataset_url)
+            dataset_path = pathlib.Path(dataset_path)
+
+    val_split, train_split = st.select_slider(
+        "Validation split", 
+        options=[20,30,40,50,60,70,80], 
+        value= (20,80), 
+        help='Recommended: 20-80 or 30-70')
+
+    train_ds = tf.keras.utils.image_dataset_from_directory(
+        dataset_path,
+        validation_split=val_split/100,
+        subset="training",
+        seed=123,
+        image_size=(img_height, img_width),
+        batch_size=batch_size)
+
+    val_ds = tf.keras.utils.image_dataset_from_directory(
+        dataset_path,
+        validation_split=val_split/100,
+        subset="validation",
+        seed=123,
+        image_size=(img_height, img_width),
+        batch_size=batch_size)
+            
+    class_names = train_ds.class_names
+
+    AUTOTUNE = tf.data.AUTOTUNE
+
+    train_ds = train_ds.cache().shuffle(1000).prefetch(buffer_size=AUTOTUNE)
+    val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
+
+    normalization_layer = layers.Rescaling(1./255)
+
+    normalized_ds = train_ds.map(lambda x, y: (normalization_layer(x), y))
+    image_batch, labels_batch = next(iter(normalized_ds))
+
+    num_classes = len(class_names)
+
+    data_augmentation = keras.Sequential(
+        [
+        layers.RandomFlip("horizontal",
+                            input_shape=(img_height,
+                                        img_width,
+                                        3)),
+        layers.RandomRotation(0.1),
+        layers.RandomZoom(0.1),
+        ]
+    )
+
+    model = Sequential([
+        data_augmentation,
+        layers.Rescaling(1./255),
+        layers.Conv2D(16, 3, padding='same', activation='relu'),
+        layers.MaxPooling2D(),
+        layers.Conv2D(32, 3, padding='same', activation='relu'),
+        layers.MaxPooling2D(),
+        layers.Conv2D(64, 3, padding='same', activation='relu'),
+        layers.MaxPooling2D(),
+        layers.Dropout(0.2),
+        layers.Flatten(),
+        layers.Dense(128, activation='relu'),
+        layers.Dense(num_classes)
+    ])
+
+    model.compile(optimizer='adam',
+                    loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+                    metrics=['accuracy'])
+
+    st.success("Model compiled successfully")
+
+    summary_button = st.button("View Summary")
+    if summary_button:
+        st.write("MODEL SUMMARY:\n", model.summary())
+
+    epochs = st.number_input("Number of epochs",help="Recommended: >=15")
+    st.button("Train Model")
+    if st.button("Train Model"):
+        with st.spinner("Training model..."):
+            st.write("Enjoy some music while your model cooks up...")
+            st.audio("sakura-hz-watching-anime.mp3")
+
+            history = model.fit(
+            train_ds,
+            validation_data=val_ds,
+            epochs=epochs)
+        st.success("Model trained successfully")
+        st.balloons()
+
+    model_name = st.text_input("Enter the name of the model: " )
+    if st.button("Save Model"):
+        model_path = 'models/' + model_name + datetime.now().strftime("%Y_%m_%d-%H_%M_%S") + '.h5'
+        model.save(model_path)
+        st.success("Model saved successfully")
+    st.download_button("Download model", filename=model_name + '.h5')
+    st.success("Model downloaded successfully")
+
+with tab3:
+    st.header("Test your model")
+    upload_method4 = st.radio("Select upload option", ("Upload model from device", "Use saved model"))
+
+    if upload_method4 == "Upload model from device":
+        model_file = st.file_uploader("Upload a model file", type=["h5"])
+
+        upload_button = st.button("Upload")
+        if upload_button:
+            model = tf.keras.models.load_model(model_file)
+            st.success("Model uploaded successfully")
+    elif upload_method4 == "Use saved model":
+        model_name = st.text_input("Enter the name of the model: ")
+        model_path = 'models/' + model_name
+        model = tf.keras.models.load_model(model_path)
+        st.success("Model loaded successfully")
+
+    st.subheader("Let's test the model...")
+
+    upload_method3 = st.radio(
+        "Select upload option", 
+        ("Upload Image from device", 
+        "Enter the URL of image", 
+        "Use device camera to click an image"))
+
+    upload_button = st.button("Upload")
+
+    if upload_button:
+        if upload_method3 == "Upload Image from device" or upload_method3 == "Enter the URL of image":
+            file_path = uploadOption(upload_method3)
+            imageCheck(loaded_model,file_path)
+        else:
+            camera_image = st.camera_input("Click an image to test the model")
+            if camera_image:
+                st.image(camera_image)
+                imageCheck(model, camera_image)
+    # st.write("Report a wrong classification")
+    # report_button = st.button("Report")
+
+    # if report_button:
+    #     with st.form:
+    #         st.subheader("Report a wrong classification")
+    #         st.markdown("Please enter the details of the wrong classification and help us improve your model")
+    #         input_img = Image.open(file_path)
+    #         st.image(input_img, width=250)
+    #         correct_class = st.text_input("What is the correct classification of the object in the image?")
+            
