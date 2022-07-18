@@ -5,12 +5,20 @@ import tensorflow as tf
 import pathlib
 import shutil
 import time
+import os
+import subprocess
+import zipfile
 
 from datetime import datetime
 from PIL import Image
 from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.models import Sequential
+
+def save_uploadedfile(uploadedfile):
+     with open(os.path.join("uploaded_dataset/",uploadedfile.name),"wb") as f:
+         f.write(uploadedfile.getbuffer())
+     return st.success("Saved File:{} to uploaded_dataset".format(uploadedfile.name))
 
 def imageCheck(model,img):
     img = tf.keras.utils.load_img(
@@ -85,10 +93,18 @@ with tab2:
     
     if upload_method2 == "Upload Dataset ZIP file from device":
         zip_file = st.file_uploader("Upload a dataset ZIP file", type=["zip"])
+        if zip_file is not None:
+            save_uploadedfile(zip_file)
         upload_button = st.button("Upload", key="upload_dataset")
         if upload_button:
-            shutil.unpack_archive(zip_file, 'uploaded_dataset/', format='zip')
-            dataset_path = pathlib.Path('uploaded_dataset/')
+            # with zip_file.zipfile(zip_file.name, 'r') as z:
+            #     z.extractall("uploaded_dataset")
+            subprocess.check_output(["tar","-xf", "uploaded_dataset/"+zip_file.name])
+            #shutil.unpack_archive(zip_file.name, 'uploaded_dataset/')
+            #dataset_path = tf.keras.utils.get_file(zip_file.name, origin='uploaded_dataset/'+ zip_file.name)
+            # dataset_path = pathlib.Path('uploaded_dataset/')
+            dataset_path = '_test'
+
             st.success("Dataset uploaded successfully")
 
     elif upload_method2 == "Enter the URL of dataset source":
