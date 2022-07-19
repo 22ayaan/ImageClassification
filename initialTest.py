@@ -100,6 +100,6 @@ history = model.fit(
     epochs=epochs
   )
 
-model.save('models/model' + datetime.datetime.now().strftime("%Y_%m_%d-%H_%M_%S") + '.h5')
+model.save('models/model' + datetime.datetime.now().strftime("%Y_%m_%d-%H_%M_%S") + '.hdf5')
 
 imageCheck(model)
