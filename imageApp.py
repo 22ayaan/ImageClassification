@@ -87,6 +87,7 @@ val_ds = tf.keras.utils.image_dataset_from_directory(
     
 class_names = val_ds.class_names
 # try:
+file_path = ''
 file_path = uploadOption(upload_method)
 imageCheck(loaded_model,file_path)
 # except:
