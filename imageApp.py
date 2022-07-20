@@ -86,12 +86,11 @@ val_ds = tf.keras.utils.image_dataset_from_directory(
     batch_size=batch_size)
     
 class_names = val_ds.class_names
-# try:
-file_path = ''
-file_path = uploadOption(upload_method)
-imageCheck(loaded_model,file_path)
-# except:
-#     st.info("Waiting for image to be uploaded")
+try:
+    file_path = uploadOption(upload_method)
+    imageCheck(loaded_model,file_path)
+except:
+    st.info("Waiting for image to be uploaded")
 
 # with tab2:
 #     st.header("Train your own model")
