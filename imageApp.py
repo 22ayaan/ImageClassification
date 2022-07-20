@@ -48,10 +48,10 @@ def uploadOption(upload_method):
                 img.save('image.jpg')
             st.image(img,width=250)
 
-        date = datetime.now().strftime("%Y_%m_%d-%I-%M-%S_%p")
-        directory = 'uploaded_images/'
-        filepath = directory+'image_' + date + '.jpg'
-        img.save(filepath)
+            date = datetime.now().strftime("%Y_%m_%d-%I-%M-%S_%p")
+            directory = 'uploaded_images/'
+            filepath = directory+'image_' + date + '.jpg'
+            img.save(filepath)
 
     elif upload_method == "Enter the URL of image":
         img_url = st.text_input("Enter the URL of the image you want to test: ")
