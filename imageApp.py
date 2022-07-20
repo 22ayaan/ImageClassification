@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 from operator import sub
 import streamlit as st
 import numpy as np
@@ -534,5 +534,5 @@ with tab3:
     #         input_img = Image.open(file_path)
     #         st.image(input_img, width=250)
     #         correct_class = st.text_input("What is the correct classification of the object in the image?")
->>>>>>> ac6ea0abaee9a20666138fa6ff67e898f43879d1
+
             
